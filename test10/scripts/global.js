@@ -137,3 +137,87 @@ function prepareSlideshow(){
     }
 }
 addLoadEvent(prepareSlideshow);
+
+//根据指定id显示相应section同时隐藏其他部分
+function showSection(id) {
+    var sections = document.getElementsByTagName("section");
+    for (var i=0;i<sections.length;i++) {
+        if (sections[i].getAttribute("id") != id) {
+            sections[i].style.display = "none";
+        } else {
+            sections[i].style.display = "block";
+        }
+    }
+}
+//将nav中的连接与相应id联结起来
+function prepareInternalnav() {
+    if (!document.getElementsByTagName) return false;
+    if (!document.getElementById) return false;
+    var articles = document.getElementsByTagName("article");
+    if (articles.length == 0) return false;
+    var navs = articles[0].getElementsByTagName("nav");
+    if (navs.length == 0) return false;
+    var nav = navs[0];
+    var links = nav.getElementsByTagName("a");
+    for (var i=0;i<links.length;i++) {
+        var sectionId = links[i].getAttribute("href").split("#")[1]; //获取href中“#”后面部分字符串
+        if (!document.getElementById(sectionId)) continue;
+        document.getElementById(sectionId).style.display = "none";
+        links[i].destination =  sectionId;
+        links[i].onclick = function () {
+            showSection(this.destination);
+            return false;
+        }
+    }
+}
+addLoadEvent(prepareInternalnav);
+
+//替换图片函数
+function showPic(whichpic) {
+    if (!document.getElementById("placeholder")) return true;
+    var source = whichpic.getAttribute("href");
+    var placeholder = document.getElementById("placeholder");
+    if (placeholder.nodeName != "IMG") return false;
+    placeholder.setAttribute("src",source);
+    if (document.getElementById("description")){
+        var text=whichpic.getAttribute("title") ? whichpic.getAttribute("title") : "";
+        var description=document.getElementById("description");
+        if (description.firstChild.nodeType == 3){
+            description.firstChild.nodeValue=text;
+        }
+    }
+    return true;
+}
+//创建p元素和img元素
+function preparePlaceholder(){
+    if (!document.createElement) return false;
+    if (!document.createTextNode) return false;
+    if (!document.getElementById) return false;
+    if (!document.getElementById("imagegallery")) return false;
+    var placeholder = document.createElement("img");
+    placeholder.setAttribute("id","placeholder");
+    placeholder.setAttribute("src","images/placeholder.gif");
+    placeholder.setAttribute("alt","my image gallery");
+    var description = document.createElement("p");
+    description.setAttribute("id","description");
+    var desctext = document.createTextNode("choose an image");
+    description.appendChild(desctext);
+    var gallery = document.getElementById("imagegallery");
+    insertAfter(description,gallery);
+    insertAfter(placeholder,description);
+}
+addLoadEvent(preparePlaceholder);
+//点击替换图片函数
+function prepareGallery(){
+    if (!document.getElementById) return false;
+    if (!document.getElementsByTagName) return false;
+    if (!document.getElementById("imagegallery")) return false;
+    var gallery=document.getElementById("imagegallery");
+    var links=gallery.getElementsByTagName("a");
+    for (var i=0;i<links.length;i++){
+        links[i].onclick=function(){
+            return showPic(this) ? false : true;
+        }
+    }
+}
+addLoadEvent(prepareGallery);

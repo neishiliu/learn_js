@@ -302,3 +302,153 @@ function displayAbbreviations(){
     container.appendChild(dlist);
 }
 addLoadEvent(displayAbbreviations);
+
+//label标签单击时相应input元素获得焦点
+function focusLabels(){
+    if (!document.getElementsByTagName) return false;
+    var labels = document.getElementsByTagName("label");
+    for (var i=0;i<labels.length;i++) {
+        if (!labels[i].getAttribute("for")) continue;
+        labels[i].onclick = function() {
+            var id = this.getAttribute("for");
+            if (!document.getElementById(id)) return false;
+            var element = document.getElementById(id);
+            element.focus();
+        }
+    }
+}
+addLoadEvent(focusLabels);
+//为input元素添加占位符
+function resetFields(whichform) {
+    if (Modernizr.input.placeholder) return; //检查浏览器是否支持placeholder属性，不支持则继续
+    for (var i=0;i<whichform.elements.length;i++) {
+        var element = whichform.elements[i];
+        if (element.type == "submit") continue;
+        var check = element.placeholder || element.getAttribute("placeholder");
+        if (!check) continue;
+        element.onfocus = function() {
+            var text = this.placeholder || this.getAttribute("placeholder");
+            if (this.value == text) {
+                this.className = "";
+                this.value = "";
+            }
+        };
+        element.onblur = function() {
+            if (this.value == "") {
+                this.className = "placeholder";
+                this.value = this.placeholder || this.getAttribute("placeholder");
+            }
+        };
+        element.onblur ();
+    }
+}
+//提取文档中的form元素
+function prepareForms() {
+    for (var i=0;i<document.forms.length;i++) {
+        var thisform = document.forms[i];
+        resetFields(thisform);
+        thisform.onsubmit = function () {
+            if (!validateForm(this)) return false;
+            var article = document.getElementsByTagName('article')[0];
+            if (submitFormWithAjax(this, article)) return false;
+            return true;
+        }
+    }
+}
+addLoadEvent(prepareForms);
+//验证表单是否填写
+function isFilled(field) {
+    if (field.value.replace(" ","").length == 0) return false; //判断去掉空格的value值是否存在，不存在返回false
+    var placeholder = field.placeholder || field.getAttribute("placeholder");
+    return (field.value != placeholder);
+}
+//验证邮箱是否填写正确
+function isEmail(field) {
+    return (field.value.indexOf("@") != -1 && field.value.indexOf(".") != -1);
+}
+//表单有错误时显示的警告
+function validateForm(whichform) {
+    for (var i=0;i<whichform.elements.length;i++) {
+        var element = whichform.elements[i];
+        if (element.required == "required") {
+            if (!isFilled(element)) {
+                alert("骚年你没有输入正确哦！ 请输入"+element.name);
+                return false;
+            }
+        }
+        if (element.type == "email") {
+            if (!isEmail(element)) {
+                alert("骚年你的邮箱格式不正确哦！请重新输入!");
+                return false;
+            }
+        }
+    }
+    return true;
+}
+//ajax部分
+function getHTTPObject() {
+    if (typeof XMLHttpRequest == "undefined")
+        XMLHttpRequest = function () {
+            try { return new ActiveXObject("Msxml2.XMLHTTP.6.0"); }
+            catch (e) {}
+            try { return new ActiveXObject("Msxml2.XMLHTTP.3.0"); }
+            catch (e) {}
+            try { return new ActiveXObject("Msxml2.XMLHTTP"); }
+            catch (e) {}
+            return false;
+        };
+    return new XMLHttpRequest();
+}
+
+function displayAjaxLoading(element) {
+    // Remove the existing content.
+    while (element.hasChildNodes()) {
+        element.removeChild(element.lastChild);
+    }
+    //  Create a loading image.
+    var content = document.createElement("img");
+    content.setAttribute("src","images/loading.gif");
+    content.setAttribute("alt","Loading...");
+    // Append the loading element.
+    element.appendChild(content);
+}
+
+function submitFormWithAjax( whichform, thetarget ) {
+
+    var request = getHTTPObject();
+    if (!request) { return false; }
+
+    // Display a loading message.
+    displayAjaxLoading(thetarget);
+
+    // Collect the data.
+    var dataParts = [];
+    var element;
+    for (var i=0; i<whichform.elements.length; i++) {
+        element = whichform.elements[i];
+        dataParts[i] = element.name + '=' + encodeURIComponent(element.value);
+    }
+    var data = dataParts.join('&');
+
+    request.open('POST', whichform.getAttribute("action"), true);
+    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+    request.onreadystatechange = function () {
+        if (request.readyState == 4) {
+            if (request.status == 200 || request.status == 0) {
+                var matches = request.responseText.match(/<article>([\s\S]+)<\/article>/);
+                if (matches.length > 0) {
+                    thetarget.innerHTML = matches[1];
+                } else {
+                    thetarget.innerHTML = '<p>Oops, there was an error. Sorry.</p>';
+                }
+            } else {
+                thetarget.innerHTML = '<p>' + request.statusText + '</p>';
+            }
+        }
+    };
+
+    request.send(data);
+
+    return true;
+}
